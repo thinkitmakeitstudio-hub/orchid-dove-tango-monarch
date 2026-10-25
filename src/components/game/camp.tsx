@@ -70,7 +70,7 @@ export function Camp() {
               );
             }
             return (
-              <button key={id} type="button" className="seat" onClick={() => toggleHero(id)}>
+              <button key={id} type="button" className={`seat class-${id}`} onClick={() => toggleHero(id)}>
                 <div className="roster-row">
                   <img className="roster-portrait" src={`/figures/hero-${id}.png`} alt="" />
                   <div className="roster-body">
@@ -100,7 +100,7 @@ export function Camp() {
             const need = xpThreshold(hero.level);
             const pct = hero.level >= LEVEL_CAP || need === 0 ? 100 : Math.min(100, (hero.xp / need) * 100);
             return (
-              <article key={id} className={`hero-plate${open ? "" : " is-locked"}${seated ? " is-seated" : ""}`}>
+              <article key={id} className={`hero-plate class-${id}${open ? "" : " is-locked"}${seated ? " is-seated" : ""}`}>
                 <div className="roster-row">
                   <img className="roster-portrait" src={`/figures/hero-${id}.png`} alt="" />
                   <div className="roster-body">

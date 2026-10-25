@@ -21,9 +21,9 @@
       "status": 200,
       "title": "Adventure Cards",
       "hasCanvas": false,
-      "bodyTextLen": 47,
-      "bodyTextHash": "2695e329c852cc4b777d32bbb018caf7962c175cafabda4d59a6ead1bacb926a",
-      "bodyTextPrefix": "GUILD HALL Adventure Cards Shuffling the decks…",
+      "bodyTextLen": 1495,
+      "bodyTextHash": "45d9cce9becd53a4a3201072dd0e8a7319dc8c2b841758cf6be5eca786ce59f1",
+      "bodyTextPrefix": "GUILD HALL Adventure Cards Draft up to four heroes, pick a door,",
       "horizontalOverflow": false,
       "consoleErrors": [],
       "pageErrors": [],
@@ -33,8 +33,6 @@
   "brandWarnings": [],
   "authWarnings": [],
   "verdictFile": "/workspace/screenshots/app-builder-built.json",
-  "divergesFromBaseline": true,
-  "baselineReasons": [
-    "mobile: body text collapsed (1552 -> 47 chars)"
-  ]
+  "divergesFromBaseline": false,
+  "baselineReasons": []
 }

@@ -4,17 +4,17 @@
 @theme {
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Cinzel", ui-serif, Georgia, serif;
-  --color-bg: #07060a;
-  --color-surface: #141018;
-  --color-surface-2: #221c28;
-  --color-fg: #f3eadc;
-  --color-muted: #b3a394;
-  --color-gold: #c6a15a;
-  --color-gold-2: #e6d3a4;
-  --color-blood: #a33b42;
-  --color-parchment: #f0e4cc;
-  --color-ink: #1a1214;
-  --color-line: #3c3344;
+  --color-bg: #1B1A3A;
+  --color-surface: #2A2550;
+  --color-surface-2: #3A3170;
+  --color-fg: #FFFFFF;
+  --color-muted: #C9C2F0;
+  --color-gold: #FFB000;
+  --color-gold-2: #FFD23F;
+  --color-blood: #E63946;
+  --color-parchment: #FFF8EC;
+  --color-ink: #1B1A3A;
+  --color-line: #6C5CE7;
   --radius-card: 0.4rem;
 }
 
@@ -36,7 +36,7 @@
     background-color: var(--color-bg);
     background-image:
       radial-gradient(ellipse 70% 40% at 50% -10%, color-mix(in oklab, var(--color-gold) 14%, transparent), transparent 60%),
-      linear-gradient(180deg, #100c14, var(--color-bg) 24rem);
+      linear-gradient(180deg, var(--color-surface), var(--color-bg) 24rem);
   }
 
   :focus-visible {
@@ -171,7 +171,6 @@ button.playing-card {
   font: inherit;
   text-align: left;
   color: var(--color-ink);
-  border: 0;
   background: var(--color-parchment);
 }
 
@@ -184,7 +183,7 @@ button.playing-card {
   text-align: left;
   border-radius: var(--radius-card);
   border: 1px solid var(--color-line);
-  background: color-mix(in oklab, var(--color-surface) 88%, black);
+  background: color-mix(in oklab, var(--color-surface) 82%, var(--color-surface-2));
   color: var(--color-fg);
 }
 
@@ -277,8 +276,9 @@ button.playing-card {
 .badge-poison,
 .badge-down,
 .risk-high,
-.risk-deadly {
-  color: var(--color-blood);
+.risk-deadly,
+.floater-dmg {
+  color: #ffb4ba;
 }
 
 .xp {
@@ -301,7 +301,7 @@ button.playing-card {
   margin-top: 0.4rem;
   height: 0.55rem;
   border-radius: 999px;
-  background: color-mix(in oklab, var(--color-ink) 55%, #1a1214);
+  background: color-mix(in oklab, var(--color-ink) 55%, var(--color-surface));
   overflow: hidden;
 }
 
@@ -327,7 +327,7 @@ button.playing-card {
 
 .hp-bleed {
   z-index: 2;
-  background: #6e1c28;
+  background: #ff5d73;
 }
 
 .hp-shield {
@@ -341,15 +341,15 @@ button.playing-card {
   margin-top: 0.18rem;
   height: 0.38rem;
   border-radius: 999px;
-  background: #121826;
+  background: color-mix(in oklab, var(--color-surface) 70%, #6c7bd9);
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgb(158 192 255 / 0.55);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, #c9c2f0 70%, var(--color-line));
 }
 
 .mana > span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #3a6fd0, #9ec0ff);
+  background: linear-gradient(90deg, #6c7bd9, #e7e2ff);
   transition: width 220ms ease-out;
 }
 
@@ -374,9 +374,11 @@ button.playing-card {
   object-fit: contain;
   object-position: center top;
   border-radius: 0.55rem;
+  border: 3px solid var(--class-accent, var(--color-line));
+  box-shadow: 0 8px 16px rgb(27 26 58 / 0.28);
   background:
-    radial-gradient(ellipse at 50% 28%, rgb(110 42 58 / 0.5), transparent 68%),
-    #120c10;
+    radial-gradient(ellipse at 50% 28%, color-mix(in oklab, var(--class-accent, var(--color-line)) 55%, transparent), transparent 68%),
+    var(--color-surface-2);
 }
 
 .roster-body {
@@ -415,8 +417,8 @@ button.playing-card {
 }
 
 .btn-blood {
-  background: var(--color-blood);
-  color: var(--color-parchment);
+  background: #d62e3b;
+  color: #fff;
 }
 
 .btn-tiny {
@@ -513,7 +515,7 @@ button.playing-card {
   object-fit: cover;
   object-position: center;
   display: block;
-  background: #140e0c;
+  background: var(--color-surface);
 }
 
 .door-body {
@@ -573,11 +575,8 @@ button.playing-card {
   min-height: 9.4rem;
   text-align: left;
   position: relative;
-  box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--color-gold) 75%, var(--color-ink)),
-    inset 0 0 0 4px var(--color-parchment),
-    inset 0 0 0 5px color-mix(in oklab, var(--color-ink) 70%, var(--color-gold)),
-    0 12px 24px rgb(0 0 0 / 0.4);
+  border: 2px solid #9b5de5;
+  box-shadow: 0 10px 22px rgb(155 93 229 / 0.28), 0 8px 16px rgb(27 26 58 / 0.22);
   transition: scale 150ms ease-out, transform 150ms ease-out;
 }
 
@@ -587,9 +586,10 @@ button.playing-card {
 
 .playing-card.is-selected {
   transform: translateY(-6px);
+  border-color: var(--color-gold);
   box-shadow:
-    inset 0 0 0 2px var(--color-gold),
-    0 16px 28px rgb(0 0 0 / 0.35);
+    0 0 0 2px var(--color-gold-2),
+    0 16px 28px rgb(27 26 58 / 0.32);
 }
 
 .playing-card.is-disabled {
@@ -616,13 +616,13 @@ button.playing-card {
 }
 
 .card-mana {
-  color: #1e4f96;
+  color: #3c2c86;
   font-weight: 800;
   letter-spacing: 0.08em;
 }
 
 .card-mana.is-free {
-  color: var(--color-gold);
+  color: #8a4e00;
 }
 
 .playing-card.is-dry {
@@ -653,15 +653,17 @@ button.playing-card {
 }
 
 .relic-rare {
+  border-color: var(--color-gold);
   box-shadow:
-    inset 0 0 0 2px var(--color-gold),
-    0 10px 24px rgb(0 0 0 / 0.28);
+    0 0 0 2px var(--color-gold),
+    0 10px 22px rgb(255 176 0 / 0.28);
 }
 
 .relic-mythic {
+  border-color: var(--color-blood);
   box-shadow:
-    inset 0 0 0 2px var(--color-blood),
-    0 10px 24px rgb(0 0 0 / 0.28);
+    0 0 0 2px var(--color-blood),
+    0 10px 22px rgb(230 57 70 / 0.32);
 }
 
 .threat {
@@ -745,7 +747,7 @@ button.playing-card {
   color: var(--color-ink);
   border-radius: 0.9rem;
   padding: 0.75rem 1rem;
-  box-shadow: 0 12px 30px rgb(0 0 0 / 0.35);
+  box-shadow: 0 12px 30px rgb(27 26 58 / 0.35);
   font-weight: 650;
 }
 
@@ -753,7 +755,7 @@ button.playing-card {
   position: fixed;
   inset: 0;
   z-index: 40;
-  background: rgb(10 7 5 / 0.72);
+  background: color-mix(in oklab, var(--color-bg) 78%, transparent);
   display: grid;
   place-items: end center;
   padding: 0.75rem;
@@ -809,13 +811,14 @@ button.playing-card {
 }
 
 .floater-dmg {
-  color: var(--color-blood);
+  color: #ffb4ba;
+  text-shadow: 0 1px 2px rgb(27 26 58 / 0.9);
 }
 .floater-heal {
   color: #6ee7a2;
   font-size: 1.55rem;
   text-shadow:
-    0 2px 0 rgb(0 0 0 / 0.7),
+    0 2px 0 rgb(27 26 58 / 0.7),
     0 0 12px rgb(40 140 80 / 0.85);
 }
 .floater-block,
@@ -936,8 +939,8 @@ button.playing-card {
   object-position: center;
   border-radius: 0.45rem;
   background:
-    radial-gradient(ellipse at 50% 40%, rgb(110 42 58 / 0.45), transparent 70%),
-    #120c10;
+    radial-gradient(ellipse at 50% 40%, color-mix(in oklab, var(--color-line) 45%, transparent), transparent 70%),
+    var(--color-surface);
 }
 
 .codex-row h3 {
@@ -1013,7 +1016,15 @@ button.playing-card {
   .stand img,
   .stand.is-minion,
   .xp > span,
-  .hp > span {
+  .hp > span,
+  .battlefield::before,
+  .battlefield::after,
+  .door-miniboss,
+  .door-final,
+  .stand.is-boss,
+  .stand.is-boss img,
+  .threat.is-boss,
+  .stand.is-striking img {
     animation: none;
     transition: none;
   }
@@ -1043,7 +1054,7 @@ button.playing-card {
   justify-content: flex-end;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgb(0 0 0 / 0.08) 0%, rgb(0 0 0 / 0.18) 42%, rgb(7 6 10 / 0.72) 100%),
+    linear-gradient(180deg, color-mix(in oklab, var(--color-bg) 12%, transparent) 0%, color-mix(in oklab, var(--color-bg) 28%, transparent) 42%, color-mix(in oklab, var(--color-bg) 62%, transparent) 100%),
     url("/figures/hall.jpg") center 30% / cover no-repeat;
 }
 
@@ -1064,7 +1075,7 @@ button.playing-card {
   right: 0.7rem;
   top: 0.45rem;
   margin: 0;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.85);
+  text-shadow: 0 1px 2px rgb(27 26 58 / 0.85);
   pointer-events: none;
   color: var(--color-gold-2);
   font-size: 0.82rem;
@@ -1098,8 +1109,8 @@ button.playing-card {
   margin-top: 0;
   padding-top: 0.85rem;
   border-top: 1px solid color-mix(in oklab, var(--color-gold) 48%, transparent);
-  background: linear-gradient(180deg, rgb(7 6 10 / 0.62), transparent 2.4rem);
-  box-shadow: inset 0 12px 16px rgb(0 0 0 / 0.28);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--color-bg) 72%, transparent), transparent 2.4rem);
+  box-shadow: inset 0 12px 16px rgb(27 26 58 / 0.28);
 }
 
 .foe-line .stand img,
@@ -1160,7 +1171,7 @@ button.playing-card {
 
 .stand.is-loot {
   border: 1px solid color-mix(in oklab, var(--color-line) 80%, transparent);
-  background: rgb(7 6 10 / 0.42);
+  background: color-mix(in oklab, var(--color-bg) 42%, transparent);
   margin-bottom: 0.15rem;
 }
 
@@ -1204,7 +1215,7 @@ button.playing-card {
 .stand.is-loot .stand-plate {
   flex: none;
   padding: 0.28rem 0.35rem 0.4rem;
-  background: rgb(7 6 10 / 0.94);
+  background: color-mix(in oklab, var(--color-bg) 92%, transparent);
 }
 
 button.stand {
@@ -1241,10 +1252,23 @@ button.stand {
   width: 100%;
   object-fit: contain;
   object-position: center bottom;
-  filter: drop-shadow(0 16px 12px rgb(0 0 0 / 0.75));
+  filter: drop-shadow(0 16px 12px rgb(27 26 58 / 0.55));
   pointer-events: none;
   user-select: none;
   animation: figure-breathe 3.6s ease-in-out infinite;
+}
+
+.stand[class*="class-"] img {
+  filter:
+    drop-shadow(0 0 7px var(--class-accent))
+    drop-shadow(0 12px 8px rgb(27 26 58 / 0.4));
+}
+
+.stand.class-nephilim img {
+  filter:
+    drop-shadow(0 0 8px var(--color-gold))
+    drop-shadow(0 0 16px color-mix(in oklab, var(--class-accent) 75%, white))
+    drop-shadow(0 12px 8px rgb(27 26 58 / 0.4));
 }
 
 .foe-line .stand:nth-child(2n) img,
@@ -1299,7 +1323,7 @@ button.stand {
   width: 100%;
   padding: 1.4rem 0.2rem 0.15rem;
   text-align: center;
-  background: linear-gradient(180deg, transparent, rgb(7 6 10 / 0.92) 55%);
+  background: linear-gradient(180deg, transparent, color-mix(in oklab, var(--color-bg) 88%, transparent) 55%);
 }
 
 .stand-plate .chip-name,
@@ -1320,7 +1344,7 @@ button.stand {
 .stand-plate .chip-name {
   font-size: 0.78rem;
   color: var(--color-parchment);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.8);
+  text-shadow: 0 1px 2px rgb(27 26 58 / 0.8);
 }
 
 .stand-plate .hint,
@@ -1356,7 +1380,7 @@ button.stand {
 }
 
 .hero-line:has(.is-actor) .stand:not(.is-actor) {
-  filter: saturate(0.65) brightness(0.78);
+  filter: saturate(0.92) brightness(0.96);
 }
 
 .turn-flag {
@@ -1404,7 +1428,7 @@ button.stand {
 .stand.is-actor img {
   filter:
     drop-shadow(0 0 14px var(--color-gold))
-    drop-shadow(0 14px 10px rgb(0 0 0 / 0.72));
+    drop-shadow(0 14px 10px rgb(27 26 58 / 0.45));
   animation: turn-glow 1.6s ease-in-out infinite;
 }
 
@@ -1412,21 +1436,21 @@ button.stand {
   50% {
     filter:
       drop-shadow(0 0 22px var(--color-gold-2))
-      drop-shadow(0 14px 10px rgb(0 0 0 / 0.72));
+      drop-shadow(0 14px 10px rgb(27 26 58 / 0.45));
   }
 }
 
 .stand.is-target img {
   filter:
     drop-shadow(0 0 14px var(--color-gold))
-    drop-shadow(0 14px 10px rgb(0 0 0 / 0.72));
+    drop-shadow(0 14px 10px rgb(27 26 58 / 0.45));
 }
 
 .stand.is-raging img,
 .stand.is-form-3 img {
   filter:
     drop-shadow(0 0 12px var(--color-blood))
-    drop-shadow(0 14px 10px rgb(0 0 0 / 0.72));
+    drop-shadow(0 14px 10px rgb(27 26 58 / 0.45));
 }
 
 .phase-flash {
@@ -1456,7 +1480,7 @@ button.stand {
 }
 
 .stand.is-down img {
-  filter: grayscale(1) brightness(0.55) drop-shadow(0 10px 8px rgb(0 0 0 / 0.6));
+  filter: grayscale(1) brightness(0.7) drop-shadow(0 10px 8px rgb(27 26 58 / 0.45));
 }
 
 .stand .floaters {
@@ -1465,7 +1489,7 @@ button.stand {
 }
 
 .card-dock {
-  background: linear-gradient(180deg, rgb(7 6 10 / 0.2), #07060a 18%);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--color-bg) 18%, transparent), var(--color-bg) 18%);
   border-top: 1px solid color-mix(in oklab, var(--color-gold) 45%, transparent);
   max-height: 38dvh;
   padding-top: 0.45rem;
@@ -1488,4 +1512,228 @@ button.stand {
 
 .card-dock .h-scroll {
   align-items: stretch;
+}
+
+.class-knight { --class-accent: #6c7bd9; }
+.class-paladin { --class-accent: #ffd23f; }
+.class-cleric { --class-accent: #ffffff; }
+.class-rogue { --class-accent: #e63946; }
+.class-witch { --class-accent: #f15bb5; }
+.class-druid { --class-accent: #7ae582; }
+.class-necro { --class-accent: #9b5de5; }
+.class-bard { --class-accent: #ff9f1c; }
+.class-warden { --class-accent: #4cc9f0; }
+.class-nephilim { --class-accent: #f5f0ff; }
+
+.playing-card[class*="class-"] {
+  border-color: var(--class-accent);
+  box-shadow:
+    0 10px 22px color-mix(in oklab, var(--class-accent) 32%, transparent),
+    0 8px 16px rgb(27 26 58 / 0.22);
+}
+
+.playing-card.class-cleric,
+.playing-card.class-nephilim {
+  box-shadow:
+    0 0 0 1px var(--color-ink),
+    0 10px 22px rgb(27 26 58 / 0.22);
+}
+
+.playing-card.class-nephilim {
+  box-shadow:
+    0 0 0 1px var(--color-ink),
+    0 0 16px var(--color-gold),
+    0 10px 22px rgb(255 176 0 / 0.35);
+}
+
+.playing-card.is-selected {
+  border-color: var(--color-gold);
+  box-shadow:
+    0 0 0 2px var(--color-gold-2),
+    0 16px 28px rgb(27 26 58 / 0.32);
+}
+
+.seat[class*="class-"] .name,
+.hero-plate[class*="class-"] .name,
+.stand[class*="class-"] .chip-name {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.02rem 0.42rem 0.05rem;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: #fff;
+  text-shadow: none;
+  box-shadow: inset 0 0 0 2px var(--class-accent);
+}
+
+.seat.class-nephilim .name,
+.hero-plate.class-nephilim .name,
+.stand.class-nephilim .chip-name {
+  box-shadow:
+    inset 0 0 0 2px var(--class-accent),
+    0 0 10px var(--color-gold);
+}
+
+.class-nephilim .roster-portrait {
+  box-shadow:
+    0 0 12px var(--color-gold),
+    0 0 22px color-mix(in oklab, var(--color-gold) 70%, transparent);
+}
+
+[class*="class-"] .mark {
+  border-color: var(--class-accent);
+  background: color-mix(in oklab, var(--class-accent) 32%, var(--color-surface));
+  color: var(--color-fg);
+}
+
+.class-cleric .mark,
+.class-nephilim .mark,
+.class-paladin .mark {
+  color: var(--color-ink);
+  background: var(--class-accent);
+}
+
+.turn-banner[class*="class-"] .turn-name {
+  text-decoration: underline;
+  text-decoration-color: var(--class-accent);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 0.12em;
+}
+
+.sheet[class*="class-"] h2 {
+  text-decoration: underline;
+  text-decoration-color: var(--class-accent);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 0.14em;
+}
+
+.gear-tabs button[class*="class-"] {
+  border-color: var(--class-accent);
+}
+
+.gear-tabs button.is-on[class*="class-"] {
+  background: var(--color-ink);
+  color: #fff;
+  border-color: var(--class-accent);
+  box-shadow: inset 0 0 0 2px var(--class-accent);
+}
+
+.turn-banner .grudge-full {
+  color: var(--color-ink);
+  text-decoration: underline;
+}
+
+.door-miniboss,
+.door-final,
+.stand.is-boss,
+.threat.is-boss {
+  animation: boss-glow 2.4s ease-in-out infinite;
+}
+
+.door-miniboss,
+.door-final {
+  border-color: var(--color-gold);
+}
+
+@keyframes boss-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 2px color-mix(in oklab, var(--color-gold) 80%, white),
+      inset 0 0 16px color-mix(in oklab, var(--color-gold) 35%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 2px var(--color-blood),
+      inset 0 0 26px color-mix(in oklab, var(--color-gold) 55%, var(--color-blood)),
+      0 0 18px color-mix(in oklab, var(--color-gold) 45%, transparent);
+  }
+}
+
+.stand.is-boss img {
+  animation: boss-figure-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes boss-figure-glow {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 8px var(--color-gold))
+      drop-shadow(0 12px 8px rgb(27 26 58 / 0.4));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 16px var(--color-blood))
+      drop-shadow(0 0 10px var(--color-gold-2))
+      drop-shadow(0 12px 8px rgb(27 26 58 / 0.4));
+  }
+}
+
+.battlefield::before,
+.battlefield::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.battlefield::before {
+  left: 14%;
+  top: 22%;
+  background: #f15bb5;
+  box-shadow:
+    26vw 6vh 0 0 #7ae582,
+    46vw -8vh 0 1px #f15bb5,
+    6vw 20vh 0 0 #7ae582;
+  animation: sparkle-drift 18s linear infinite;
+}
+
+.battlefield::after {
+  left: 72%;
+  top: 34%;
+  background: #7ae582;
+  box-shadow:
+    -22vw 12vh 0 0 #f15bb5,
+    10vw -14vh 0 1px #7ae582,
+    -6vw 18vh 0 0 #f15bb5;
+  animation: sparkle-drift 24s linear infinite reverse;
+}
+
+@keyframes sparkle-drift {
+  from {
+    transform: translate3d(0, 14%, 0);
+  }
+  to {
+    transform: translate3d(0, -30%, 0);
+  }
+}
+
+.stand.is-striking {
+  transform-origin: center bottom;
+}
+
+.stand.is-striking img {
+  transform-origin: center bottom;
+  animation: foe-bounce 320ms ease-out;
+}
+
+@keyframes foe-bounce {
+  0% {
+    transform: scale(1, 1);
+  }
+  35% {
+    transform: scale(1.14, 0.8);
+  }
+  58% {
+    transform: scale(0.92, 1.16);
+  }
+  78% {
+    transform: scale(1.05, 0.95);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
 }

@@ -38,6 +38,13 @@ function phaseIndex(phase: Run["phase"]): number {
   return 3;
 }
 
+function strikingUid(run: Run): string | null {
+  if (run.phase !== "enemy" || run.beat !== "strikes") return null;
+  const living = run.enemies.filter((enemy) => enemy.hp > 0);
+  const index = run.strikeHitsLeft > 0 ? run.strikeIndex : run.strikeIndex - 1;
+  return living[index]?.uid ?? null;
+}
+
 type Pick =
   | null
   | { source: "card" | "supply"; id: string; need: "enemy" | "ally" | "any-hero" | "none" };
@@ -54,9 +61,10 @@ export function Delve() {
   const abandon = useGame((s) => s.abandon);
   const chooseDoor = useGame((s) => s.chooseDoor);
   const brace = useGame((s) => s.brace);
-  const useSupply = useGame((s) => s.useSupply);
+  const applySupply = useGame((s) => s.applySupply);
   const beginBattle = useGame((s) => s.beginBattle);
   const play = useGame((s) => s.playCard);
+  const endTurn = useGame((s) => s.endTurn);
   const step = useGame((s) => s.step);
   const acknowledgeCurse = useGame((s) => s.acknowledgeCurse);
   const chooseRelic = useGame((s) => s.chooseRelic);
@@ -103,6 +111,7 @@ export function Delve() {
   if (!run) return null;
   const actorHero = run.party[run.actorIndex];
   const on = phaseIndex(run.phase);
+  const attacker = strikingUid(run);
   const upper =
     run.enemies.length > 0 ||
     run.phase === "treasure" ||
@@ -121,7 +130,7 @@ export function Delve() {
   function commitPick(target: string | null) {
     if (!pick) return;
     if (pick.source === "card") play(pick.id, target);
-    else useSupply(pick.id, target);
+    else applySupply(pick.id, target);
     setPick(null);
   }
 
@@ -228,7 +237,8 @@ export function Delve() {
                       ? `/figures/foe-${enemy.defId}-${form}.png`
                       : `/figures/foe-${enemy.defId}.png`;
                   const wide = enemy.defId === "bat" || enemy.defId === "spider" || enemy.defId === "hydra";
-                  const className = `stand${enemy.boss ? ` is-boss is-form-${form}` : ""}${wide ? " is-wide" : ""}${enemy.raging ? " is-raging" : ""}${dead ? " is-down" : ""}${targetable ? " is-target" : ""}${hit ? " is-hit" : ""}`;
+                  const swinging = attacker === enemy.uid;
+                  const className = `stand${enemy.boss ? ` is-boss is-form-${form}` : ""}${wide ? " is-wide" : ""}${enemy.raging ? " is-raging" : ""}${dead ? " is-down" : ""}${targetable ? " is-target" : ""}${hit ? " is-hit" : ""}${swinging ? " is-striking" : ""}`;
                   const body = (
                     <>
                       <Floaters items={floats(`enemy:${enemy.uid}`)} />
@@ -242,7 +252,7 @@ export function Delve() {
                         </p>
                         <VitalBar hp={enemy.hp} maxHp={enemy.maxHp} poison={enemy.poison} bleed={enemy.bleed} shield={0} foe />
                         <p className="hint">
-                          {dead ? "Defeated" : enemyIntent(enemy)}
+                          {dead ? "Defeated" : enemyIntent(enemy, run.round)}
                           {!dead && enemy.armor > 0 ? ` · Armor ${enemy.armor}` : ""}
                           {!dead && enemy.pierce > 0 ? ` · Pierce ${enemy.pierce}` : ""}
                           {!dead && enemy.poison > 0 ? ` · Poison ${enemy.poison}` : ""}
@@ -260,13 +270,13 @@ export function Delve() {
                   );
                   if (targetable) {
                     return (
-                      <button key={enemy.uid} type="button" className={className} onClick={() => commitPick(enemy.uid)}>
+                      <button key={swinging ? `${enemy.uid}-${run.clock}` : enemy.uid} type="button" className={className} onClick={() => commitPick(enemy.uid)}>
                         {body}
                       </button>
                     );
                   }
                   return (
-                    <div key={enemy.uid} className={className}>
+                    <div key={swinging ? `${enemy.uid}-${run.clock}` : enemy.uid} className={className}>
                       {body}
                     </div>
                   );
@@ -368,7 +378,7 @@ export function Delve() {
                 const targetable = Boolean(pick && (pick.need === "any-hero" || (pick.need === "ally" && !hero.down)));
                 const hit = floats(`hero:${hero.id}`).some((f) => f.kind === "dmg");
                 const acting = run.phase === "battle" && actorHero?.id === hero.id;
-                const className = `stand${hero.down ? " is-down" : ""}${acting ? " is-actor" : ""}${targetable ? " is-target" : ""}${hit ? " is-hit" : ""}`;
+                const className = `stand class-${hero.classId}${hero.down ? " is-down" : ""}${acting ? " is-actor" : ""}${targetable ? " is-target" : ""}${hit ? " is-hit" : ""}`;
                 const slots = run.phase === "equip" ? slotsFor(run, hero) : null;
                 const pending = run.pendingRelic ? RELICS[run.pendingRelic] : undefined;
                 const wrongClass = Boolean(pending?.classes?.length && !pending.classes.includes(hero.classId));
@@ -499,7 +509,7 @@ export function Delve() {
 
         {run.phase === "battle" && actorHero ? (
           <>
-            <div className="turn-banner" data-testid="turn-banner">
+            <div className={`turn-banner class-${actorHero.classId}`} data-testid="turn-banner">
               <span className="turn-seat">Player {actorHero.seat + 1}</span>
               <span className="turn-name">{actorHero.name}</span>
               {actorHero.maxMana > 0 ? (
@@ -539,6 +549,7 @@ export function Delve() {
                     held={held}
                     badge={grudge ? (grudgeReady ? "ready" : `${actorHero.stored}/${cap || 12}`) : undefined}
                     badgeHot={grudgeReady}
+                    accent={actorHero.classId}
                     testId={`hand-${i}`}
                     selected={pick?.source === "card" && pick.id === card.uid}
                     onClick={() => setPick({ source: "card", id: card.uid, need: cardNeeds(card.cardId) })}
@@ -549,8 +560,19 @@ export function Delve() {
             {pick?.source === "card" ? (
               <PickBar label={pickLabel} need={pick.need} onPlay={() => commitPick(null)} onCancel={() => setPick(null)} />
             ) : (
-              <p className="hint">Tap a card, then confirm.</p>
+              <p className="hint">Tap a card, then confirm. Or end the turn.</p>
             )}
+            <button
+              type="button"
+              className="btn btn-ghost"
+              data-testid="end-turn"
+              onClick={() => {
+                setPick(null);
+                endTurn();
+              }}
+            >
+              End turn
+            </button>
           </>
         ) : null}
 

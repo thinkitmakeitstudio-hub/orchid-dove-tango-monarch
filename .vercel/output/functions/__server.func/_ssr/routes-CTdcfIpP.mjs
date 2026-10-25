@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { _ as Backpack, a as Skull, c as Leaf, d as Flame, f as Feather, g as CloudLightning, h as Crown, i as Sparkles, l as HeartPulse, m as DoorOpen, n as Swords, o as Shield, p as Droplet, r as Sun, s as Music, u as Gem } from "../_libs/lucide-react.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-CEltHRSe.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-CTdcfIpP.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ctx = null;
@@ -2075,8 +2075,12 @@ function grantXp(run, hero, amount, events) {
 function grantPartyXp(run, amount, events) {
 	for (const h of run.party) grantXp(run, h, amount, events);
 }
-function effectiveAtk(e) {
-	return Math.max(1, e.atk - e.weaken);
+var WEAKEN_CAP = 8;
+function hallPressure(run) {
+	return Math.max(0, run.round - 20);
+}
+function effectiveAtk(run, e) {
+	return Math.max(1, e.atk - e.weaken) + hallPressure(run);
 }
 function pull(deck, discard, rnd) {
 	let d = deck.slice();
@@ -2332,7 +2336,7 @@ function damageEnemy(run, enemy, amount, useArmor, events, quiet) {
 }
 function strikeHero(run, enemy, hero, events) {
 	if (enemy.skip || enemy.hp <= 0 || hero.down) return;
-	const atk = effectiveAtk(enemy);
+	const atk = effectiveAtk(run, enemy);
 	const cleave = enemy.alwaysCleave || enemy.raging && enemy.rageCleave;
 	const targets = cleave ? livingHeroes(run) : [hero];
 	for (const target of targets) {
@@ -2426,7 +2430,7 @@ function resolveEffects(run, hero, effects, targetId, events, exhaustHand) {
 		}
 	} else if (effect.op === "flat") {
 		const targets = effect.all ? livingEnemies(run).slice() : foe ? [foe] : [];
-		for (const enemy of targets) damageEnemy(run, enemy, effect.amount, true, events);
+		for (const enemy of targets) damageEnemy(run, enemy, effect.amount, false, events);
 	} else if (effect.op === "block") continue;
 	else if (effect.op === "heal") {
 		if (effect.self) healHero(hero, effect.amount, events);
@@ -2458,13 +2462,17 @@ function resolveEffects(run, hero, effects, targetId, events, exhaustHand) {
 			} });
 		}
 	} else if (effect.op === "weaken" && foe && foe.hp > 0) {
-		foe.weaken += effect.amount;
-		log(run, `${foe.name} is weakened (−${effect.amount} Attack).`);
-		events.push({ floater: {
-			key: `enemy:${foe.uid}`,
-			text: `−${effect.amount} ATK`,
-			kind: "buff"
-		} });
+		const next = Math.min(WEAKEN_CAP, foe.weaken + effect.amount);
+		const gained = next - foe.weaken;
+		foe.weaken = next;
+		if (gained > 0) {
+			log(run, `${foe.name} is weakened (−${gained} Attack).`);
+			events.push({ floater: {
+				key: `enemy:${foe.uid}`,
+				text: `−${gained} ATK`,
+				kind: "buff"
+			} });
+		} else log(run, `${foe.name} cannot be weakened further.`);
 	} else if (effect.op === "poison" && foe && foe.hp > 0) {
 		foe.poison += effect.amount;
 		log(run, `${foe.name} is poisoned (${foe.poison}).`);
@@ -2788,7 +2796,19 @@ function endOfEnemyPhase(run, events) {
 	run.prepSupplyUsed = false;
 	run.phase = "prep";
 	run.hand = [];
-	log(run, `Round ${run.round}.`);
+	let restored = 0;
+	for (const hero of run.party) {
+		if (hero.down || hero.maxMana <= 0 || hero.mana >= hero.maxMana) continue;
+		hero.mana += 1;
+		restored += 1;
+		events.push({ floater: {
+			key: `hero:${hero.id}`,
+			text: "+1 mana",
+			kind: "buff"
+		} });
+	}
+	log(run, restored > 0 ? `Round ${run.round}. The ley returns a little mana.` : `Round ${run.round}.`);
+	if (run.round > 20) log(run, `The hall grows cruel. Foes hit ${run.round - 20} harder.`);
 	return {
 		run,
 		events
@@ -2945,6 +2965,10 @@ function openCombat(run, events) {
 	run.prepSupplyUsed = false;
 	run.tauntHeroId = null;
 	for (const h of run.party) {
+		if (h.exhaust.length) {
+			h.deck = shuffle([...h.deck, ...h.exhaust], () => roll(run));
+			h.exhaust = [];
+		}
 		h.block = 0;
 		h.atkBuff = 0;
 		h.defBuff = 0;
@@ -3486,21 +3510,21 @@ function resolveEffectsClean(run, hero, effects, targetId, events, exhaustHand) 
 	applyBlocks(run, hero, effects.filter((e) => e.op === "block"), targetId, events);
 }
 function beginBattle(prev) {
-	const run = clone(prev);
 	const events = [];
-	if (run.phase !== "prep") return {
+	if (prev.phase !== "prep") return {
 		run: prev,
-		events: []
+		events
 	};
+	const run = clone(prev);
 	if (livingHeroes(run).length === 0) return {
 		run,
-		events: [],
+		events,
 		outcome: "defeat"
 	};
 	beginRoundBattle(run, events);
 	if (livingEnemies(run).length > 0) log(run, `${run.party[run.actorIndex]?.name ?? "A hero"}'s turn.`);
 	events.push({ sfx: "card" });
-	if (livingEnemies(run).length === 0 && run.finalSlain) return {
+	if (livingEnemies(run).length === 0 && run.finalSlain && run.phase !== "treasure") return {
 		run,
 		events,
 		outcome: "victory"
@@ -3605,22 +3629,9 @@ function playCard(prev, handUid, targetId) {
 	discardHand(hero, run.hand, handCard.uid, exhausts);
 	run.hand = [];
 	events.push({ sfx: "card" });
-	if (finishIfWiped(run)) return {
-		run,
-		events,
-		outcome: "defeat"
-	};
-	const won = maybeWonRoom(run, events);
-	if (won) return won;
-	run.playsLeft -= 1;
-	if (run.playsLeft > 0) {
-		dealHand(run, hero);
-		log(run, `${hero.name} plays again.`);
-		return {
-			run,
-			events
-		};
-	}
+	return afterPlay(run, events);
+}
+function nextActor(run, events) {
 	let next = run.actorIndex + 1;
 	while (next < run.party.length && (run.party[next].down || run.party[next].hp <= 0)) next += 1;
 	if (next >= run.party.length) {
@@ -3640,6 +3651,45 @@ function playCard(prev, handUid, targetId) {
 		run,
 		events
 	};
+}
+function afterPlay(run, events) {
+	if (finishIfWiped(run)) return {
+		run,
+		events,
+		outcome: "defeat"
+	};
+	const won = maybeWonRoom(run, events);
+	if (won) return won;
+	run.playsLeft -= 1;
+	const hero = run.party[run.actorIndex];
+	if (run.playsLeft > 0 && hero && !hero.down) {
+		dealHand(run, hero);
+		log(run, `${hero.name} plays again.`);
+		return {
+			run,
+			events
+		};
+	}
+	return nextActor(run, events);
+}
+function endTurn(prev) {
+	const run = clone(prev);
+	const events = [];
+	if (run.phase !== "battle") return {
+		run: prev,
+		events
+	};
+	const hero = run.party[run.actorIndex];
+	if (!hero || hero.down) return {
+		run: prev,
+		events
+	};
+	log(run, `${hero.name} ends the turn.`);
+	discardHand(hero, run.hand, "", false);
+	run.hand = [];
+	run.playsLeft = 1;
+	events.push({ sfx: "ui" });
+	return afterPlay(run, events);
 }
 function stepEnemies(prev) {
 	if (prev.phase !== "enemy") return {
@@ -4131,8 +4181,8 @@ function cardNeeds(cardId) {
 	if (cardNeedsTarget(card.target, card.effects)) return "enemy";
 	return "none";
 }
-function enemyIntent(enemy) {
-	const atk = Math.max(1, enemy.atk - enemy.weaken);
+function enemyIntent(enemy, round = 1) {
+	const atk = Math.max(1, enemy.atk - enemy.weaken) + Math.max(0, round - 20);
 	if (enemy.skip) return "Skips";
 	const cleave = enemy.alwaysCleave || enemy.raging && enemy.rageCleave;
 	const double = enemy.alwaysDouble || enemy.raging && enemy.rageDouble;
@@ -4519,7 +4569,7 @@ var useGame = create((set, get) => {
 			if (!run) return;
 			commit(brace(run, id));
 		},
-		useSupply: (id, target) => {
+		applySupply: (id, target) => {
 			const run = get().run;
 			if (!run) return;
 			commit(useSupply(run, id, target));
@@ -4533,6 +4583,11 @@ var useGame = create((set, get) => {
 			const run = get().run;
 			if (!run) return;
 			commit(playCard(run, id, target));
+		},
+		endTurn: () => {
+			const run = get().run;
+			if (!run) return;
+			commit(endTurn(run));
 		},
 		step: () => {
 			const run = get().run;
@@ -4657,7 +4712,7 @@ function Floaters({ items }) {
 		}, f.id))
 	});
 }
-function PowerCard({ cardId, selected, disabled, onClick, testId, atk, atkBuff, dry, free, spent, held, badge, badgeHot }) {
+function PowerCard({ cardId, selected, disabled, onClick, testId, atk, atkBuff, dry, free, spent, held, badge, badgeHot, accent }) {
 	const card = CARDS[cardId] ?? SUPPLIES[cardId];
 	if (!card) return null;
 	const power = cardPowerLabel({
@@ -4709,7 +4764,7 @@ function PowerCard({ cardId, selected, disabled, onClick, testId, atk, atkBuff, 
 			children: card.text
 		})
 	] });
-	const className = `playing-card${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}${dry ? " is-dry" : ""}`;
+	const className = `playing-card${accent ? ` class-${accent}` : ""}${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}${dry ? " is-dry" : ""}`;
 	if (onClick) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 		type: "button",
 		className,
@@ -4874,7 +4929,7 @@ function HeroSheet() {
 		role: "presentation",
 		onClick: () => openSheet(null),
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "sheet",
+			className: `sheet class-${id}`,
 			role: "dialog",
 			"aria-modal": "true",
 			"aria-labelledby": "sheet-title",
@@ -5019,7 +5074,7 @@ function GearBook({ onClose }) {
 						type: "button",
 						role: "tab",
 						"aria-selected": h.id === hero.id,
-						className: h.id === hero.id ? "is-on" : "",
+						className: `${h.id === hero.id ? "is-on" : ""} class-${h.classId}`,
 						onClick: () => setTab(h.id),
 						children: h.name
 					}, h.id))
@@ -5337,7 +5392,7 @@ function Camp() {
 									}, i);
 									return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 										type: "button",
-										className: "seat",
+										className: `seat class-${id}`,
 										onClick: () => toggleHero(id),
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 											className: "roster-row",
@@ -5392,7 +5447,7 @@ function Camp() {
 									const need = xpThreshold(hero.level);
 									const pct = hero.level >= 50 || need === 0 ? 100 : Math.min(100, hero.xp / need * 100);
 									return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", {
-										className: `hero-plate${open ? "" : " is-locked"}${seated ? " is-seated" : ""}`,
+										className: `hero-plate class-${id}${open ? "" : " is-locked"}${seated ? " is-seated" : ""}`,
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 											className: "roster-row",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
@@ -5533,6 +5588,10 @@ function phaseIndex(phase) {
 	if (phase === "battle" || phase === "enemy") return 2;
 	return 3;
 }
+function strikingUid(run) {
+	if (run.phase !== "enemy" || run.beat !== "strikes") return null;
+	return run.enemies.filter((enemy) => enemy.hp > 0)[run.strikeHitsLeft > 0 ? run.strikeIndex : run.strikeIndex - 1]?.uid ?? null;
+}
 function Delve() {
 	const run = useGame((s) => s.run);
 	const floaters = useGame((s) => s.floaters);
@@ -5545,9 +5604,10 @@ function Delve() {
 	const abandon = useGame((s) => s.abandon);
 	const chooseDoor = useGame((s) => s.chooseDoor);
 	const brace = useGame((s) => s.brace);
-	const useSupply = useGame((s) => s.useSupply);
+	const applySupply = useGame((s) => s.applySupply);
 	const beginBattle = useGame((s) => s.beginBattle);
 	const play = useGame((s) => s.playCard);
+	const endTurn = useGame((s) => s.endTurn);
 	const step = useGame((s) => s.step);
 	const acknowledgeCurse = useGame((s) => s.acknowledgeCurse);
 	const chooseRelic = useGame((s) => s.chooseRelic);
@@ -5598,6 +5658,7 @@ function Delve() {
 	if (!run) return null;
 	const actorHero = run.party[run.actorIndex];
 	const on = phaseIndex(run.phase);
+	const attacker = strikingUid(run);
 	const upper = run.enemies.length > 0 || run.phase === "treasure" || run.phase === "shop" || run.phase === "equip" && Boolean(run.pendingRelic);
 	function storeCapOf(hero) {
 		const gear = run?.equipped[hero.id] ?? [];
@@ -5609,7 +5670,7 @@ function Delve() {
 	function commitPick(target) {
 		if (!pick) return;
 		if (pick.source === "card") play(pick.id, target);
-		else useSupply(pick.id, target);
+		else applySupply(pick.id, target);
 		setPick(null);
 	}
 	function clickHero(hero) {
@@ -5786,7 +5847,8 @@ function Delve() {
 								const form = enemy.form || 1;
 								const art = enemy.boss && form > 1 ? `/figures/foe-${enemy.defId}-${form}.png` : `/figures/foe-${enemy.defId}.png`;
 								const wide = enemy.defId === "bat" || enemy.defId === "spider" || enemy.defId === "hydra";
-								const className = `stand${enemy.boss ? ` is-boss is-form-${form}` : ""}${wide ? " is-wide" : ""}${enemy.raging ? " is-raging" : ""}${dead ? " is-down" : ""}${targetable ? " is-target" : ""}${hit ? " is-hit" : ""}`;
+								const swinging = attacker === enemy.uid;
+								const className = `stand${enemy.boss ? ` is-boss is-form-${form}` : ""}${wide ? " is-wide" : ""}${enemy.raging ? " is-raging" : ""}${dead ? " is-down" : ""}${targetable ? " is-target" : ""}${hit ? " is-hit" : ""}${swinging ? " is-striking" : ""}`;
 								const body = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Floaters, { items: floats(`enemy:${enemy.uid}`) }),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PhaseFlash, { form }),
@@ -5816,7 +5878,7 @@ function Delve() {
 											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 												className: "hint",
 												children: [
-													dead ? "Defeated" : enemyIntent(enemy),
+													dead ? "Defeated" : enemyIntent(enemy, run.round),
 													!dead && enemy.armor > 0 ? ` · Armor ${enemy.armor}` : "",
 													!dead && enemy.pierce > 0 ? ` · Pierce ${enemy.pierce}` : "",
 													!dead && enemy.poison > 0 ? ` · Poison ${enemy.poison}` : "",
@@ -5836,11 +5898,11 @@ function Delve() {
 									className,
 									onClick: () => commitPick(enemy.uid),
 									children: body
-								}, enemy.uid);
+								}, swinging ? `${enemy.uid}-${run.clock}` : enemy.uid);
 								return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 									className,
 									children: body
-								}, enemy.uid);
+								}, swinging ? `${enemy.uid}-${run.clock}` : enemy.uid);
 							})
 						}) : null,
 						run.enemies.length === 0 && (run.phase === "treasure" || run.phase === "equip" && run.pendingRelic) ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -5944,7 +6006,7 @@ function Delve() {
 								const targetable = Boolean(pick && (pick.need === "any-hero" || pick.need === "ally" && !hero.down));
 								const hit = floats(`hero:${hero.id}`).some((f) => f.kind === "dmg");
 								const acting = run.phase === "battle" && actorHero?.id === hero.id;
-								const className = `stand${hero.down ? " is-down" : ""}${acting ? " is-actor" : ""}${targetable ? " is-target" : ""}${hit ? " is-hit" : ""}`;
+								const className = `stand class-${hero.classId}${hero.down ? " is-down" : ""}${acting ? " is-actor" : ""}${targetable ? " is-target" : ""}${hit ? " is-hit" : ""}`;
 								const slots = run.phase === "equip" ? slotsFor(run, hero) : null;
 								const pending = run.pendingRelic ? RELICS[run.pendingRelic] : void 0;
 								const wrongClass = Boolean(pending?.classes?.length && !pending.classes.includes(hero.classId));
@@ -6107,7 +6169,7 @@ function Delve() {
 					})] }) : null,
 					run.phase === "battle" && actorHero ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "turn-banner",
+							className: `turn-banner class-${actorHero.classId}`,
 							"data-testid": "turn-banner",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
@@ -6166,6 +6228,7 @@ function Delve() {
 									held,
 									badge: grudge ? grudgeReady ? "ready" : `${actorHero.stored}/${cap || 12}` : void 0,
 									badgeHot: grudgeReady,
+									accent: actorHero.classId,
 									testId: `hand-${i}`,
 									selected: pick?.source === "card" && pick.id === card.uid,
 									onClick: () => setPick({
@@ -6183,7 +6246,17 @@ function Delve() {
 							onCancel: () => setPick(null)
 						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "hint",
-							children: "Tap a card, then confirm."
+							children: "Tap a card, then confirm. Or end the turn."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: "btn btn-ghost",
+							"data-testid": "end-turn",
+							onClick: () => {
+								setPick(null);
+								endTurn();
+							},
+							children: "End turn"
 						})
 					] }) : null,
 					run.phase === "treasure" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
@@ -6455,7 +6528,7 @@ function Results() {
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "roster",
 						children: results.rows.map((row) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
-							className: "hero-plate",
+							className: `hero-plate class-${row.classId}`,
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "plate-top",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {

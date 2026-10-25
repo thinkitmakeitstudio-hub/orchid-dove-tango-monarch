@@ -145,8 +145,14 @@ function grantPartyXp(run: Run, amount: number, events: GameEvent[]) {
   for (const h of run.party) grantXp(run, h, amount, events);
 }
 
-function effectiveAtk(e: EnemyState): number {
-  return Math.max(1, e.atk - e.weaken);
+const WEAKEN_CAP = 8;
+
+function hallPressure(run: Run): number {
+  return Math.max(0, run.round - 20);
+}
+
+function effectiveAtk(run: Run, e: EnemyState): number {
+  return Math.max(1, e.atk - e.weaken) + hallPressure(run);
 }
 
 function pull(deck: string[], discard: string[], rnd: () => number): { id: string | null; deck: string[]; discard: string[] } {
@@ -346,7 +352,7 @@ function damageEnemy(run: Run, enemy: EnemyState, amount: number, useArmor: bool
 
 function strikeHero(run: Run, enemy: EnemyState, hero: HeroState, events: GameEvent[]) {
   if (enemy.skip || enemy.hp <= 0 || hero.down) return;
-  const atk = effectiveAtk(enemy);
+  const atk = effectiveAtk(run, enemy);
   const cleave = enemy.alwaysCleave || (enemy.raging && enemy.rageCleave);
   const targets = cleave ? livingHeroes(run) : [hero];
   for (const target of targets) {
@@ -428,7 +434,7 @@ function resolveEffects(run: Run, hero: HeroState, effects: Effect[], targetId: 
       }
     } else if (effect.op === "flat") {
       const targets = effect.all ? livingEnemies(run).slice() : foe ? [foe] : [];
-      for (const enemy of targets) damageEnemy(run, enemy, effect.amount, true, events);
+      for (const enemy of targets) damageEnemy(run, enemy, effect.amount, false, events);
     } else if (effect.op === "block") {
       continue;
     } else if (effect.op === "heal") {
@@ -450,9 +456,15 @@ function resolveEffects(run: Run, hero: HeroState, effects: Effect[], targetId: 
         events.push({ floater: { key: `hero:${t.id}`, text: `+${effect.amount} DEF`, kind: "buff" } });
       }
     } else if (effect.op === "weaken" && foe && foe.hp > 0) {
-      foe.weaken += effect.amount;
-      log(run, `${foe.name} is weakened (−${effect.amount} Attack).`);
-      events.push({ floater: { key: `enemy:${foe.uid}`, text: `−${effect.amount} ATK`, kind: "buff" } });
+      const next = Math.min(WEAKEN_CAP, foe.weaken + effect.amount);
+      const gained = next - foe.weaken;
+      foe.weaken = next;
+      if (gained > 0) {
+        log(run, `${foe.name} is weakened (−${gained} Attack).`);
+        events.push({ floater: { key: `enemy:${foe.uid}`, text: `−${gained} ATK`, kind: "buff" } });
+      } else {
+        log(run, `${foe.name} cannot be weakened further.`);
+      }
     } else if (effect.op === "poison" && foe && foe.hp > 0) {
       foe.poison += effect.amount;
       log(run, `${foe.name} is poisoned (${foe.poison}).`);
@@ -744,7 +756,17 @@ function endOfEnemyPhase(run: Run, events: GameEvent[]): StepResult {
   run.prepSupplyUsed = false;
   run.phase = "prep";
   run.hand = [];
-  log(run, `Round ${run.round}.`);
+  let restored = 0;
+  for (const hero of run.party) {
+    if (hero.down || hero.maxMana <= 0 || hero.mana >= hero.maxMana) continue;
+    hero.mana += 1;
+    restored += 1;
+    events.push({ floater: { key: `hero:${hero.id}`, text: "+1 mana", kind: "buff" } });
+  }
+  log(run, restored > 0 ? `Round ${run.round}. The ley returns a little mana.` : `Round ${run.round}.`);
+  if (run.round > 20) {
+    log(run, `The hall grows cruel. Foes hit ${run.round - 20} harder.`);
+  }
   return { run, events };
 }
 
@@ -895,6 +917,10 @@ function openCombat(run: Run, events: GameEvent[]) {
   run.prepSupplyUsed = false;
   run.tauntHeroId = null;
   for (const h of run.party) {
+    if (h.exhaust.length) {
+      h.deck = shuffle([...h.deck, ...h.exhaust], () => roll(run));
+      h.exhaust = [];
+    }
     h.block = 0;
     h.atkBuff = 0;
     h.defBuff = 0;
@@ -1368,14 +1394,16 @@ function resolveEffectsClean(
 }
 
 export function beginBattle(prev: Run): StepResult {
-  const run = clone(prev);
   const events: GameEvent[] = [];
-  if (run.phase !== "prep") return { run: prev, events: [] };
-  if (livingHeroes(run).length === 0) return { run, events: [], outcome: "defeat" };
+  if (prev.phase !== "prep") return { run: prev, events };
+  const run = clone(prev);
+  if (livingHeroes(run).length === 0) return { run, events, outcome: "defeat" };
   beginRoundBattle(run, events);
   if (livingEnemies(run).length > 0) log(run, `${run.party[run.actorIndex]?.name ?? "A hero"}'s turn.`);
   events.push({ sfx: "card" });
-  if (livingEnemies(run).length === 0 && run.finalSlain) return { run, events, outcome: "victory" };
+  if (livingEnemies(run).length === 0 && run.finalSlain && run.phase !== "treasure") {
+    return { run, events, outcome: "victory" };
+  }
   return { run, events };
 }
 
@@ -1434,15 +1462,10 @@ export function playCard(prev: Run, handUid: string, targetId: string | null): S
   discardHand(hero, run.hand, handCard.uid, exhausts);
   run.hand = [];
   events.push({ sfx: "card" });
-  if (finishIfWiped(run)) return { run, events, outcome: "defeat" };
-  const won = maybeWonRoom(run, events);
-  if (won) return won;
-  run.playsLeft -= 1;
-  if (run.playsLeft > 0) {
-    dealHand(run, hero);
-    log(run, `${hero.name} plays again.`);
-    return { run, events };
-  }
+  return afterPlay(run, events);
+}
+
+function nextActor(run: Run, events: GameEvent[]): StepResult {
   let next = run.actorIndex + 1;
   while (next < run.party.length && (run.party[next]!.down || run.party[next]!.hp <= 0)) next += 1;
   if (next >= run.party.length) {
@@ -1453,6 +1476,34 @@ export function playCard(prev: Run, handUid: string, targetId: string | null): S
   if (run.phase !== "battle") return { run, events };
   log(run, `${run.party[next]!.name}'s turn.`);
   return { run, events };
+}
+
+function afterPlay(run: Run, events: GameEvent[]): StepResult {
+  if (finishIfWiped(run)) return { run, events, outcome: "defeat" };
+  const won = maybeWonRoom(run, events);
+  if (won) return won;
+  run.playsLeft -= 1;
+  const hero = run.party[run.actorIndex];
+  if (run.playsLeft > 0 && hero && !hero.down) {
+    dealHand(run, hero);
+    log(run, `${hero.name} plays again.`);
+    return { run, events };
+  }
+  return nextActor(run, events);
+}
+
+export function endTurn(prev: Run): StepResult {
+  const run = clone(prev);
+  const events: GameEvent[] = [];
+  if (run.phase !== "battle") return { run: prev, events };
+  const hero = run.party[run.actorIndex];
+  if (!hero || hero.down) return { run: prev, events };
+  log(run, `${hero.name} ends the turn.`);
+  discardHand(hero, run.hand, "", false);
+  run.hand = [];
+  run.playsLeft = 1;
+  events.push({ sfx: "ui" });
+  return afterPlay(run, events);
 }
 
 export function stepEnemies(prev: Run): StepResult {
@@ -1819,8 +1870,8 @@ export function cardNeeds(cardId: string): "enemy" | "ally" | "any-hero" | "none
   return "none";
 }
 
-export function enemyIntent(enemy: EnemyState): string {
-  const atk = Math.max(1, enemy.atk - enemy.weaken);
+export function enemyIntent(enemy: EnemyState, round = 1): string {
+  const atk = Math.max(1, enemy.atk - enemy.weaken) + Math.max(0, round - 20);
   if (enemy.skip) return "Skips";
   const cleave = enemy.alwaysCleave || (enemy.raging && enemy.rageCleave);
   const double = enemy.alwaysDouble || (enemy.raging && enemy.rageDouble);

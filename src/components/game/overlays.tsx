@@ -119,7 +119,7 @@ export function HeroSheet() {
 
   return (
     <div className="overlay" role="presentation" onClick={() => openSheet(null)}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" onClick={(e) => e.stopPropagation()}>
+      <div className={`sheet class-${id}`} role="dialog" aria-modal="true" aria-labelledby="sheet-title" onClick={(e) => e.stopPropagation()}>
         <div className="plate-top">
           <div>
             <p className="kicker">{cls.role}</p>
@@ -228,7 +228,7 @@ export function GearBook({ onClose }: { onClose: () => void }) {
                   type="button"
                   role="tab"
                   aria-selected={h.id === hero.id}
-                  className={h.id === hero.id ? "is-on" : ""}
+                  className={`${h.id === hero.id ? "is-on" : ""} class-${h.classId}`}
                   onClick={() => setTab(h.id)}
                 >
                   {h.name}

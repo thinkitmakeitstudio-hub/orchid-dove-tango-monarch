@@ -19,7 +19,8 @@ import {
   startRun,
   stepEnemies,
   syncRoster,
-  useSupply,
+  useSupply as applySupplyAction,
+  endTurn as passTurn,
 } from "./engine";
 import { emptySave, loadSave, writeSave } from "./save";
 import type { Floater, PersistedHero, Results, Run, SaveBlob, Settings, Stats, StepResult } from "./types";
@@ -55,9 +56,10 @@ interface GameStore {
   resetGuild: () => void;
   chooseDoor: (id: string) => void;
   brace: (id: string) => void;
-  useSupply: (id: string, target: string | null) => void;
+  applySupply: (id: string, target: string | null) => void;
   beginBattle: () => void;
   playCard: (id: string, target: string | null) => void;
+  endTurn: () => void;
   step: () => void;
   acknowledgeCurse: () => void;
   chooseRelic: (id: string | "none") => void;
@@ -268,10 +270,10 @@ export const useGame = create<GameStore>((set, get) => {
       if (!run) return;
       commit(brace(run, id));
     },
-    useSupply: (id, target) => {
+    applySupply: (id, target) => {
       const run = get().run;
       if (!run) return;
-      commit(useSupply(run, id, target));
+      commit(applySupplyAction(run, id, target));
     },
     beginBattle: () => {
       const run = get().run;
@@ -282,6 +284,11 @@ export const useGame = create<GameStore>((set, get) => {
       const run = get().run;
       if (!run) return;
       commit(playCard(run, id, target));
+    },
+    endTurn: () => {
+      const run = get().run;
+      if (!run) return;
+      commit(passTurn(run));
     },
     step: () => {
       const run = get().run;

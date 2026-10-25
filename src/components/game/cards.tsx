@@ -30,6 +30,7 @@ export function PowerCard({
   held,
   badge,
   badgeHot,
+  accent,
 }: {
   cardId: string;
   selected?: boolean;
@@ -44,6 +45,7 @@ export function PowerCard({
   held?: boolean;
   badge?: string;
   badgeHot?: boolean;
+  accent?: string;
 }) {
   const card = CARDS[cardId] ?? SUPPLIES[cardId];
   if (!card) return null;
@@ -67,7 +69,7 @@ export function PowerCard({
       <span className="card-text">{card.text}</span>
     </>
   );
-  const className = `playing-card${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}${dry ? " is-dry" : ""}`;
+  const className = `playing-card${accent ? ` class-${accent}` : ""}${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}${dry ? " is-dry" : ""}`;
   if (onClick) {
     return (
       <button type="button" className={className} onClick={onClick} disabled={disabled} data-testid={testId}>

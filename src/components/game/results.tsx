@@ -24,7 +24,7 @@ export function Results() {
       <section className="section">
         <div className="roster">
           {results.rows.map((row) => (
-            <article key={row.id} className="hero-plate">
+            <article key={row.id} className={`hero-plate class-${row.classId}`}>
               <div className="plate-top">
                 <div>
                   <p className="role">{CLASSES[row.classId]?.name}</p>
